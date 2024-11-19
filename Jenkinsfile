@@ -4,8 +4,8 @@ pipeline {
     environment {
         
         DOCKER_CREDENTIALS = 'docker-hub-credentials'
-        DOCKER_IMAGE = 'your-username/your-repository'  
-        BRANCH_NAME = "${env.BRANCH_NAME}"             
+        DOCKER_IMAGE = 'your-username/your-repository'  // dockerhub username and repo name 
+        BRANCH_NAME = "main"             
         COMMIT_HASH = "${sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()}" 
     }
 
@@ -14,7 +14,7 @@ pipeline {
             steps {
                 script {
                    
-                    git branch: "${BRANCH_NAME}", url: 'https://github.com/your-username/your-repository.git'
+                    git branch: "main", url: 'https://github.com/your-username/your-repository.git'
                 }
             }
         }
