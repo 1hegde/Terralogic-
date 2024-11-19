@@ -1,57 +1,40 @@
 pipeline {
     agent any
-
+    
     environment {
-        
-        DOCKER_CREDENTIALS = 'docker-hub-credentials'
-        DOCKER_IMAGE = 'your-username/your-repository'  // dockerhub username and repo name 
-        BRANCH_NAME = "main"             
-        COMMIT_HASH = "${sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()}" 
+        DOCKER_CREDENTIALS = credentials('dockerhub-credentials') // Jenkins credential id
+        IMAGE_NAME = 'my-app-image'
+        IMAGE_TAG = 'latest'
     }
 
     stages {
-        stage('Clone Repository') {
+        stage('Cloning the repo') {
             steps {
-                script {
-                   
-                    git branch: "main", url: 'https://github.com/1hegde/Terralogic-.git'
-                }
+                checkout scmGit(branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/1hegde/Terralogic-.git']])
+                echo 'Code checkout done'
+            }
+        }
+    
+         stage('Build Image') {
+            steps {
+                // Build the Docker image
+                sh 'docker build -t my-app-image:latest .'
+                echo 'Docker image built'
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Push Docker Image') {
             steps {
                 script {
-                    
-                    sh """
-                    docker build -t ${DOCKER_IMAGE}:${COMMIT_HASH} -t ${DOCKER_IMAGE}:${BRANCH_NAME} .
-                    """
-                }
-            }
-        }
-
-        stage('Push Docker Image to Docker Hub') {
-            steps {
-                script {
-                   
-                    withCredentials([usernamePassword(credentialsId: DOCKER_CREDENTIALS, passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
-                        sh """
-                        docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}
-                        docker push ${DOCKER_IMAGE}:${COMMIT_HASH}
-                        docker push ${DOCKER_IMAGE}:${BRANCH_NAME}
-                        """
+                    // Log in to Docker Hub
+                    withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                        sh "echo ${DOCKER_PASSWORD} | docker login --username ${DOCKER_USERNAME} --password-stdin"
                     }
+
+                    // Push the Docker image to Docker Hub
+                    sh "docker push ${DOCKER_CREDENTIALS_USR}/${IMAGE_NAME}:${IMAGE_TAG}"
                 }
             }
-        }
-    }
-
-    post {
-        success {
-            echo "Docker image pushed successfully!"
-        }
-        failure {
-            echo "Pipeline failed."
         }
     }
 }
